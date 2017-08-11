@@ -92,9 +92,13 @@ def main(argv=None):
     X = poly_kernel_matrix(x_true,Degree_mdl) # maps to the feature space of the model
     X = Variable(torch.FloatTensor(X).type(dtype), requires_grad=False)
     Y = Variable(torch.FloatTensor(Y).type(dtype), requires_grad=False)
+    w_init=torch.randn(D_sgd,1).type(dtype)
+    w_mdl = Variable( w_init, requires_grad=True)
     #### Get models
     ## SGD model
     mdl_sgd = torch.nn.Sequential( torch.nn.Linear(D_sgd,1,bias=False) )
+    mdl_sgd_w = list( mdl_sgd.parameters() )[0]
+    mdl_sgd_w.data = torch.t( w_init.clone() )
     #mdl_sgd = regression_NN(w_init=torch.randn(D_sgd,1).type(dtype))
     print('>>norm(Y): ', ((1/N)*torch.norm(Y)**2).data.numpy()[0] )
     print('>>l2_loss_torch: ', (1/N)*( Y - mdl_sgd.forward(X)).pow(2).sum().data.numpy()[0] )
@@ -103,30 +107,43 @@ def main(argv=None):
     nb_module_params = len( list(mdl_sgd.parameters()) )
     print('params: ', params)
     print('nb_module_params: ', nb_module_params)
+    #
+    print('--\nmdl_sgd_w.data: {} \n w_mdl {}'.format( mdl_sgd_w.data,w_mdl ) )
+    #
     loss_list = [ ]
     for i in range(nb_iter):
         # Forward pass: compute predicted Y using operations on Variables
         batch_xs, batch_ys = get_batch2(X,Y,M,dtype) # [M, D], [M, 1]
         ## FORWARD PASS
-        y_pred = mdl_sgd.forward(X)
+        y_pred_mdl_sgd = mdl_sgd.forward(batch_xs)
+        y_pred_w_mdl = batch_xs.mm(w_mdl)
         ## LOSS
-        loss = (1/N)*(y_pred - batch_ys).pow(2).sum()
-        ## Manually zero the gradients after updating weights
-        mdl_sgd.zero_grad()
+        loss_mdl_sgd = (1/N)*(y_pred_mdl_sgd - batch_ys).pow(2).sum()
+        loss_mdl_w_mdl = (1/N)*(y_pred_w_mdl - batch_ys).pow(2).sum()
         ## BACKARD PASS
-        loss.backward() # Use autograd to compute the backward pass. Now w will have gradients
+        loss_mdl_sgd.backward()
+        loss_mdl_w_mdl.backward()
         ## SGD update
+        #pdb.set_trace()
         for W in mdl_sgd.parameters():
             #print(W.grad.data)
-            #W = W - eta*W.grad
-            W.data.sub_(eta*W.grad.data)
+            print('--\W.grad.data: {} \n w_mdl.grad {}'.format( W.grad.data,w_mdl.grad ) )
+            #W.data.sub_(eta*W.grad.data)
+            W = W - eta*W.grad
+        w_mdl = w_mdl - eta*w_mdl.grad
+        print( mdl_sgd )
+        #print('--\nmdl_sgd_w.data: {} \n w_mdl {}'.format( mdl_sgd_w.data,w_mdl.data ) )
+        pdb.set_trace()
+        ## Manually zero the gradients after updating weights
+        mdl_sgd.zero_grad()
+        w_mdl.grad.data.zero_()
         ## TRAINING STATS
-        if i % 100 == 0 or i == 0:
-            current_loss = loss.data.numpy()[0]
-            loss_list.append(current_loss)
-            if not np.isfinite(current_loss) or np.isinf(current_loss) or np.isnan(current_loss):
-                print('loss: {} \n >>>>> BREAK HAPPENED'.format(current_loss) )
-                break
+        # if i % 100 == 0 or i == 0:
+        #     current_loss = loss.data.numpy()[0]
+        #     loss_list.append(current_loss)
+        #     if not np.isfinite(current_loss) or np.isinf(current_loss) or np.isnan(current_loss):
+        #         print('loss: {} \n >>>>> BREAK HAPPENED'.format(current_loss) )
+        #         break
     ##
     print('\a')
     #
@@ -165,10 +182,10 @@ def main(argv=None):
     'data points'])
     plt.ylabel('f(x)')
     ##
-    fig1 = plt.figure()
-    p_loss, = plt.plot(np.arange(len(loss_list)), loss_list,color='m')
-    plt.legend([p_loss],['plot loss'])
-    plt.title('Loss vs Iterations')
+    # fig1 = plt.figure()
+    # p_loss, = plt.plot(np.arange(len(loss_list)), loss_list,color='m')
+    # plt.legend([p_loss],['plot loss'])
+    # plt.title('Loss vs Iterations')
     ##
     seconds = (time.time() - start_time)
     plt.show()
