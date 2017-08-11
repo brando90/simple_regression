@@ -11,7 +11,6 @@ import maps
 import pdb
 
 from models_pytorch import *
-from inits import *
 
 def f_mdl_LA(x,c):
     D,_ = c.shape
@@ -95,8 +94,8 @@ def main(argv=None):
     Y = Variable(torch.FloatTensor(Y).type(dtype), requires_grad=False)
     #### Get models
     ## SGD model
-    #mdl_sgd = torch.nn.Sequential( torch.nn.Linear(D_sgd,1,bias=False) )
-    mdl_sgd = regression_NN(w_init=torch.randn(D_sgd,1).type(dtype))
+    mdl_sgd = torch.nn.Sequential( torch.nn.Linear(D_sgd,1,bias=False) )
+    #mdl_sgd = regression_NN(w_init=torch.randn(D_sgd,1).type(dtype))
     print('>>norm(Y): ', ((1/N)*torch.norm(Y)**2).data.numpy()[0] )
     print('>>l2_loss_torch: ', (1/N)*( Y - mdl_sgd.forward(X)).pow(2).sum().data.numpy()[0] )
     #
@@ -133,7 +132,7 @@ def main(argv=None):
     X,Y = X.data.numpy(),Y.data.numpy()
     #
     c_sgd = list(mdl_sgd.parameters())[0].data.numpy()
-    #c_sgd = c_sgd.transpose()
+    c_sgd = c_sgd.transpose()
     if debug:
         print('X = ', X)
         print('Y = ', Y)

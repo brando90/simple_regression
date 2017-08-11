@@ -11,7 +11,6 @@ import maps
 import pdb
 
 from models_pytorch import *
-from inits import *
 
 def f_mdl_LA(x,c):
     D,_ = c.shape
