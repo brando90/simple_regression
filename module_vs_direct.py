@@ -93,7 +93,7 @@ def main(argv=None):
     X = Variable(torch.FloatTensor(X).type(dtype), requires_grad=False)
     Y = Variable(torch.FloatTensor(Y).type(dtype), requires_grad=False)
     w_init=torch.randn(D_sgd,1).type(dtype)
-    w_mdl = Variable( w_init, requires_grad=True)
+    w_mdl = Variable( w_init.clone(), requires_grad=True)
     #### Get models
     ## SGD model
     mdl_sgd = torch.nn.Sequential( torch.nn.Linear(D_sgd,1,bias=False) )
@@ -123,17 +123,28 @@ def main(argv=None):
         ## BACKARD PASS
         loss_mdl_sgd.backward()
         loss_mdl_w_mdl.backward()
+        #print('1 ========')
+        W = list( mdl_sgd.parameters() )[0]
+        # print( 'W.grad: ', W.grad )
+        # print( 'w_mdl.grad: ', w_mdl.grad )
         ## SGD update
         #pdb.set_trace()
         for W in mdl_sgd.parameters():
-            #print(W.grad.data)
-            print('--\W.grad.data: {} \n w_mdl.grad {}'.format( W.grad.data,w_mdl.grad ) )
             #W.data.sub_(eta*W.grad.data)
-            W = W - eta*W.grad
-        w_mdl = w_mdl - eta*w_mdl.grad
-        print( mdl_sgd )
+            #W = W - eta*W.grad
+            W.data = W.data - eta*W.grad.data
+            #W.copy_( W.data - eta*W.grad.data )
+        #pdb.set_trace()
+        # print('2 ========')
+        # print( 'W.grad: ', W.grad )
+        # print( 'w_mdl.grad: ', w_mdl.grad )
+        #w_mdl = w_mdl - eta*w_mdl.grad
+        w_mdl.data.sub_( eta*w_mdl.grad.data )
+        # print('========')
+        # print( 'mdl_sgd: ', mdl_sgd )
+        # print( 'w_mdl: ', w_mdl )
         #print('--\nmdl_sgd_w.data: {} \n w_mdl {}'.format( mdl_sgd_w.data,w_mdl.data ) )
-        pdb.set_trace()
+        #pdb.set_trace()
         ## Manually zero the gradients after updating weights
         mdl_sgd.zero_grad()
         w_mdl.grad.data.zero_()

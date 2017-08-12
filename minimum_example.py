@@ -108,25 +108,27 @@ def main(argv=None):
         # Forward pass: compute predicted Y using operations on Variables
         batch_xs, batch_ys = get_batch2(X,Y,M,dtype) # [M, D], [M, 1]
         ## FORWARD PASS
-        y_pred = mdl_sgd.forward(X)
+        y_pred = mdl_sgd.forward(batch_xs)
         ## LOSS
         loss = (1/N)*(y_pred - batch_ys).pow(2).sum()
-        ## Manually zero the gradients after updating weights
-        mdl_sgd.zero_grad()
         ## BACKARD PASS
         loss.backward() # Use autograd to compute the backward pass. Now w will have gradients
         ## SGD update
         for W in mdl_sgd.parameters():
             #print(W.grad.data)
             #W = W - eta*W.grad
-            W.data.sub_(eta*W.grad.data)
+            #W.data.sub_(eta*W.grad.data)
+            #W.data = W.data - eta*W.grad.data
+            W.data.copy_(W.data - eta*W.grad.data)
         ## TRAINING STATS
-        if i % 100 == 0 or i == 0:
+        if i % 500 == 0 or i == 0:
             current_loss = loss.data.numpy()[0]
             loss_list.append(current_loss)
             if not np.isfinite(current_loss) or np.isinf(current_loss) or np.isnan(current_loss):
                 print('loss: {} \n >>>>> BREAK HAPPENED'.format(current_loss) )
                 break
+        ## Manually zero the gradients after updating weights
+        mdl_sgd.zero_grad()
     ##
     print('\a')
     #
